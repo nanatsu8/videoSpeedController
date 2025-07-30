@@ -32,6 +32,10 @@
                 "type": "increaseSpeed",
                 "step": -0.5
             },
+            "s": {
+                "type": "increaseSpeed",
+                "step": 0.0
+            },
             "d": {
                 "type": "increaseSpeed",
                 "step": 0.5
