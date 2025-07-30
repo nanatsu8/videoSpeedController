@@ -24,30 +24,66 @@
             keyboard: {
                 enableKeyboardShortcuts: true,
                 defaultModifiers: ["alt"],
-                actions: {
-                    "=": {
-                        type: "increaseSpeed",
-                        step: 0.25
-                    },
-                    "-": {
-                        type: "increaseSpeed",
-                        step: -0.25
-                    },
-                    "0": {
-                        type: "setSpeed",
-                        speed: 1.0
-                    },
-                    "2": {
-                        type: "setSpeed",
-                        speed: 0.5
-                    },
+                "actions": {
                     "q": {
-                        type: "seekRelative",
-                        time: -10
+                        "type": "setSpeed",
+                        "speed": 1.0
                     },
                     "w": {
-                        type: "seekRelative",
-                        time: 10
+                        "type": "setSpeed",
+                        "speed": 1.5
+                    },
+                    "e": {
+                        "type": "setSpeed",
+                        "speed": 2.0
+                    },
+                    "a": {
+                        "type": "increaseSpeed",
+                        "step": -0.5
+                    },
+                    "d": {
+                        "type": "increaseSpeed",
+                        "step": 0.5
+                    },
+                    "z": {
+                        "type": "increaseSpeed",
+                        "step": -0.1
+                    },
+                    "x": {
+                        "type": "increaseSpeed",
+                        "step": 0.1
+                    },
+                    "v": {
+                        "type": "seekRelative",
+                        "time": -2
+                    },
+                    "b": {
+                        "type": "seekRelative",
+                        "time": 2
+                    },
+                    "g": {
+                        "type": "seekRelative",
+                        "time": -6
+                    },
+                    "h": {
+                        "type": "seekRelative",
+                        "time": 6
+                    },
+                    "y": {
+                        "type": "seekRelative",
+                        "time": -18
+                    },
+                    "u": {
+                        "type": "seekRelative",
+                        "time": 18
+                    },
+                    "n": {
+                        "type": "seekRelative",
+                        "time": 80
+                    },
+                    "p": {
+                        "type": "seekRelative",
+                        "time": 36000
                     }
                 }
             },
