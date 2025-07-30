@@ -1,0 +1,91 @@
+{
+    "speedControl": {
+        "defaultSpeed": 1.0,
+        "presetSpeeds": [
+            0.25,
+            0.5,
+            0.75,
+            1.0,
+            1.25,
+            1.5,
+            1.75,
+            2.0,
+            2.5,
+            3.0
+        ],
+        "rememberLastSpeed": true,
+        "speedStep": 0.25,
+        "minSpeed": 0.1,
+        "maxSpeed": 5.0
+    },
+    "ui": {
+        "showSpeedNotifications": true,
+        "notificationDuration": 1000,
+        "enableOnPageLoad": true
+    },
+    "keyboard": {
+        "enableKeyboardShortcuts": true,
+        "keys": {
+            "increaseSpeed": "s",
+            "decreaseSpeed": "a",
+            "normalSpeed": "0",
+            "setSpeed025": "1",
+            "setSpeed050": "2",
+            "setSpeed075": "3",
+            "setSpeed100": "4",
+            "setSpeed125": "5",
+            "setSpeed150": "6",
+            "setSpeed175": "7",
+            "setSpeed200": "8",
+            "setSpeed250": "9",
+            "setSpeed300": "q"
+        },
+        "modifiers": {
+            "increaseSpeed": [
+                "alt"
+            ],
+            "decreaseSpeed": [
+                "alt"
+            ],
+            "normalSpeed": [
+                "alt"
+            ],
+            "setSpeed025": [
+                "alt"
+            ],
+            "setSpeed050": [
+                "alt"
+            ],
+            "setSpeed075": [
+                "alt"
+            ],
+            "setSpeed100": [
+                "alt"
+            ],
+            "setSpeed125": [
+                "alt"
+            ],
+            "setSpeed150": [
+                "alt"
+            ],
+            "setSpeed175": [
+                "alt"
+            ],
+            "setSpeed200": [
+                "alt"
+            ],
+            "setSpeed250": [
+                "alt"
+            ],
+            "setSpeed300": [
+                "alt"
+            ]
+        }
+    },
+    "advanced": {
+        "protectionMethod": "property_override",
+        "debugMode": false,
+        "autoApplyToNewVideos": true,
+        "checkInterval": 100
+    }
+}

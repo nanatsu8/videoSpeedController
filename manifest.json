@@ -1,0 +1,32 @@
+{
+    "manifest_version": 3,
+    "name": "動画速度コントローラー",
+    "version": "2.0",
+    "description": "設定ファイルで管理する軽量な動画再生速度コントローラー",
+    "permissions": [
+        "activeTab"
+    ],
+    "content_scripts": [
+        {
+            "matches": [
+                "<all_urls>"
+            ],
+            "js": [
+                "content.js"
+            ]
+        }
+    ],
+    "web_accessible_resources": [
+        {
+            "resources": [
+                "settings.json"
+            ],
+            "matches": [
+                "<all_urls>"
+            ]
+        }
+    ],
+    "icons": {
+        "128": "icon.png"
+    }
+}
