@@ -2,8 +2,8 @@
     "speedControl": {
         "defaultSpeed": 1.0,
         "rememberLastSpeed": false,
-        "minSpeed": 0.1,
-        "maxSpeed": 5.0
+        "minSpeed": 0.0625,
+        "maxSpeed": 10.0
     },
     "ui": {
         "showActionNotifications": true,
