@@ -1,0 +1,52 @@
+# Chrome拡張機能関連
+*.crx
+*.pem
+*.zip
+web-ext-artifacts/
+
+# 開発環境
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS関連
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# ログファイル
+*.log
+logs/
+
+# 一時ファイル
+*.tmp
+*.temp
+.cache/
+
+# Node.js関連（必要に応じて）
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+
+# テスト関連
+coverage/
+.nyc_output/
+test/
+
+# 設定ファイル（機密情報がある場合）
+# config.local.js
+# .env.local
+
+# バックアップファイル
+*.bak
+*.backup
