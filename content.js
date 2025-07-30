@@ -169,7 +169,13 @@
         // すべての動画要素に適用
         const videos = document.querySelectorAll('video');
         videos.forEach(video => {
-            setupSpeedProtection(video, speed);
+            if (video._updateSpeed) {
+                // 既に保護されている動画の場合は専用関数を使用
+                video._updateSpeed(speed);
+            } else {
+                // 新しい動画の場合は保護設定から開始
+                setupSpeedProtection(video, speed);
+            }
         });
 
         // 通知表示
@@ -207,61 +213,94 @@
 
         // 既存の保護を解除
         if (videoObservers.has(video)) {
-            videoObservers.get(video).disconnect();
+            const existingData = videoObservers.get(video);
+            if (existingData.observer) existingData.observer.disconnect();
+            if (existingData.interval) clearInterval(existingData.interval);
         }
 
-        // playbackRateプロパティを保護
+        // 元のplaybackRateプロパティの記述子を取得
+        const originalDescriptor = Object.getOwnPropertyDescriptor(video, 'playbackRate') ||
+            Object.getOwnPropertyDescriptor(Object.getPrototypeOf(video), 'playbackRate') ||
+            Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, 'playbackRate');
+
+        // まず直接速度を設定
+        try {
+            if (originalDescriptor && originalDescriptor.set) {
+                originalDescriptor.set.call(video, targetSpeed);
+            } else {
+                video.playbackRate = targetSpeed;
+            }
+        } catch (error) {
+            console.warn('[Video Speed Controller] 初期速度設定エラー:', error);
+        }
+
+        // 保護されたplaybackRateプロパティを定義
         let protectedSpeed = targetSpeed;
+        let isInternalChange = false;
 
         Object.defineProperty(video, 'playbackRate', {
             get: function () {
                 return protectedSpeed;
             },
             set: function (value) {
-                // 外部からの変更を無視し、常に保護された速度を維持
-                protectedSpeed = targetSpeed;
-                if (this._actualPlaybackRate !== targetSpeed) {
-                    this._actualPlaybackRate = targetSpeed;
-                    // 実際のレートを設定
-                    Object.getPrototypeOf(this).playbackRate = targetSpeed;
+                if (isInternalChange) {
+                    // 内部からの変更は許可
+                    protectedSpeed = value;
+                    if (originalDescriptor && originalDescriptor.set) {
+                        originalDescriptor.set.call(this, value);
+                    }
+                } else {
+                    // 外部からの変更は拒否し、保護された速度に戻す
+                    setTimeout(() => {
+                        if (protectedSpeed !== value) {
+                            isInternalChange = true;
+                            this.playbackRate = protectedSpeed;
+                            isInternalChange = false;
+                        }
+                    }, 0);
                 }
             },
             configurable: true
         });
 
-        // 初期速度設定
-        video._actualPlaybackRate = targetSpeed;
-        Object.getPrototypeOf(video).playbackRate = targetSpeed;
+        // 速度更新用の関数
+        video._updateSpeed = function (newSpeed) {
+            protectedSpeed = newSpeed;
+            isInternalChange = true;
+            this.playbackRate = newSpeed;
+            isInternalChange = false;
+        };
 
-        // 速度変更の監視
-        const observer = new MutationObserver(() => {
-            if (video.playbackRate !== targetSpeed) {
-                video.playbackRate = targetSpeed;
-            }
-        });
+        // 初期速度を設定
+        video._updateSpeed(targetSpeed);
 
-        observer.observe(video, {
-            attributes: true,
-            attributeFilter: ['playbackRate']
-        });
-
-        videoObservers.set(video, observer);
+        // 速度変更の監視（MutationObserverは使用しない）
+        const observer = null;
 
         // 定期的な速度チェック
         const checkInterval = setInterval(() => {
             if (!document.contains(video)) {
                 clearInterval(checkInterval);
                 if (videoObservers.has(video)) {
-                    videoObservers.get(video).disconnect();
                     videoObservers.delete(video);
                 }
                 return;
             }
 
-            if (Object.getPrototypeOf(video).playbackRate !== targetSpeed) {
-                Object.getPrototypeOf(video).playbackRate = targetSpeed;
+            // 実際の再生速度をチェックして強制的に修正
+            try {
+                if (originalDescriptor && originalDescriptor.get) {
+                    const actualRate = originalDescriptor.get.call(video);
+                    if (Math.abs(actualRate - protectedSpeed) > 0.01) {
+                        video._updateSpeed(protectedSpeed);
+                    }
+                }
+            } catch (error) {
+                // エラーは無視
             }
         }, settings.advanced.checkInterval);
+
+        videoObservers.set(video, { observer, interval: checkInterval });
     }
 
     // 動画要素の監視

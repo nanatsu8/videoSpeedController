@@ -1,0 +1,87 @@
+{
+    "speedControl": {
+        "defaultSpeed": 1.0,
+        "rememberLastSpeed": false,
+        "minSpeed": 0.1,
+        "maxSpeed": 5.0
+    },
+    "ui": {
+        "showActionNotifications": true,
+        "notificationDuration": 1000,
+        "enableOnPageLoad": true
+    },
+    "keyboard": {
+        "enableKeyboardShortcuts": true,
+        "defaultModifiers": [
+            ""
+        ],
+        "actions": {
+            "q": {
+                "type": "setSpeed",
+                "speed": 1.0
+            },
+            "w": {
+                "type": "setSpeed",
+                "speed": 1.5
+            },
+            "e": {
+                "type": "setSpeed",
+                "speed": 2.0
+            },
+            "a": {
+                "type": "increaseSpeed",
+                "step": -0.5
+            },
+            "d": {
+                "type": "increaseSpeed",
+                "step": 0.5
+            },
+            "z": {
+                "type": "increaseSpeed",
+                "step": -0.1
+            },
+            "x": {
+                "type": "increaseSpeed",
+                "step": 0.1
+            },
+            "v": {
+                "type": "seekRelative",
+                "time": -2
+            },
+            "b": {
+                "type": "seekRelative",
+                "time": 2
+            },
+            "g": {
+                "type": "seekRelative",
+                "time": -6
+            },
+            "h": {
+                "type": "seekRelative",
+                "time": 6
+            },
+            "y": {
+                "type": "seekRelative",
+                "time": -18
+            },
+            "u": {
+                "type": "seekRelative",
+                "time": 18
+            },
+            "n": {
+                "type": "seekRelative",
+                "time": 80
+            },
+            "p": {
+                "type": "seekRelative",
+                "time": 36000
+            }
+        }
+    },
+    "advanced": {
+        "protectionMethod": "property_override",
+        "debugMode": false,
+        "autoApplyToNewVideos": true,
+        "checkInterval": 100
+    }
+}
