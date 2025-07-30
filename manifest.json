@@ -2,7 +2,7 @@
     "manifest_version": 3,
     "name": "動画速度コントローラー",
     "version": "2.0",
-    "description": "設定ファイルで管理する軽量な動画再生速度コントローラー",
+    "description": "軽量動画速度・シークコントローラー",
     "permissions": [
         "activeTab"
     ],
@@ -25,8 +25,5 @@
                 "<all_urls>"
             ]
         }
-    ],
-    "icons": {
-        "128": "icon.png"
-    }
+    ]
 }

@@ -1,80 +1,54 @@
-// 動画速度コントローラー - 設定ファイルベース版
 (function () {
     'use strict';
 
-    // 設定オブジェクト
-    let settings = null;
-
     // グローバル変数
+    let settings = null;
     let currentTargetSpeed = 1;
     let videoObservers = new WeakMap();
-
-    // 設定ファイルを読み込む
-    async function loadSettings() {
-        try {
-            const response = await fetch(chrome.runtime.getURL('settings.json'));
-            settings = await response.json();
-
-            // 設定を適用
-            currentTargetSpeed = settings.speedControl.defaultSpeed;
-
-            if (settings.advanced.debugMode) {
-                console.log('動画速度コントローラー設定読み込み完了:', settings);
-            }
-        } catch (error) {
-            console.error('設定ファイルの読み込みに失敗:', error);
-            // デフォルト設定を使用
-            settings = getDefaultSettings();
-        }
-    }
+    let savedSpeed = null;
 
     // デフォルト設定
     function getDefaultSettings() {
         return {
             speedControl: {
                 defaultSpeed: 1.0,
-                presetSpeeds: [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0, 2.5, 3.0],
                 rememberLastSpeed: true,
-                speedStep: 0.25,
                 minSpeed: 0.1,
                 maxSpeed: 5.0
             },
             ui: {
-                showSpeedNotifications: true,
+                showActionNotifications: true,
                 notificationDuration: 1000,
                 enableOnPageLoad: true
             },
             keyboard: {
                 enableKeyboardShortcuts: true,
-                keys: {
-                    increaseSpeed: "=",
-                    decreaseSpeed: "-",
-                    normalSpeed: "0",
-                    setSpeed025: "1",
-                    setSpeed050: "2",
-                    setSpeed075: "3",
-                    setSpeed100: "4",
-                    setSpeed125: "5",
-                    setSpeed150: "6",
-                    setSpeed175: "7",
-                    setSpeed200: "8",
-                    setSpeed250: "9",
-                    setSpeed300: "q"
-                },
-                modifiers: {
-                    increaseSpeed: ["alt"],
-                    decreaseSpeed: ["alt"],
-                    normalSpeed: ["alt"],
-                    setSpeed025: ["alt"],
-                    setSpeed050: ["alt"],
-                    setSpeed075: ["alt"],
-                    setSpeed100: ["alt"],
-                    setSpeed125: ["alt"],
-                    setSpeed150: ["alt"],
-                    setSpeed175: ["alt"],
-                    setSpeed200: ["alt"],
-                    setSpeed250: ["alt"],
-                    setSpeed300: ["alt"]
+                defaultModifiers: ["alt"],
+                actions: {
+                    "=": {
+                        type: "increaseSpeed",
+                        step: 0.25
+                    },
+                    "-": {
+                        type: "increaseSpeed",
+                        step: -0.25
+                    },
+                    "0": {
+                        type: "setSpeed",
+                        speed: 1.0
+                    },
+                    "2": {
+                        type: "setSpeed",
+                        speed: 0.5
+                    },
+                    "q": {
+                        type: "seekRelative",
+                        time: -10
+                    },
+                    "w": {
+                        type: "seekRelative",
+                        time: 10
+                    }
                 }
             },
             advanced: {
@@ -86,269 +60,313 @@
         };
     }
 
-    // 動画の速度を設定
-    function setVideoSpeed(speed) {
-        currentTargetSpeed = Math.max(settings.speedControl.minSpeed,
-            Math.min(settings.speedControl.maxSpeed, speed));
+    // 設定ファイル読み込み
+    async function loadSettings() {
+        try {
+            const settingsUrl = chrome.runtime.getURL('settings.json');
+            const response = await fetch(settingsUrl);
+            if (response.ok) {
+                const loadedSettings = await response.json();
+                settings = { ...getDefaultSettings(), ...loadedSettings };
+            } else {
+                settings = getDefaultSettings();
+            }
+        } catch (error) {
+            console.warn('[Video Speed Controller] 設定ファイルの読み込みに失敗、デフォルト設定を使用:', error);
+            settings = getDefaultSettings();
+        }
 
-        const videos = document.querySelectorAll('video');
-        videos.forEach(video => {
-            setVideoSpeedWithProtection(video, currentTargetSpeed);
-        });
-
-        // 速度を保存（設定で有効な場合）
+        // 保存された速度を復元
         if (settings.speedControl.rememberLastSpeed) {
-            localStorage.setItem('videoSpeedController_speed', currentTargetSpeed);
-        }
-
-        // 通知表示（設定で有効な場合）
-        if (settings.ui.showSpeedNotifications) {
-            showSpeedNotification(`再生速度: ${currentTargetSpeed}x`);
-        }
-    }
-
-    // 保護機能付きの速度設定
-    function setVideoSpeedWithProtection(video, speed) {
-        video.playbackRate = speed;
-        setupSpeedProtection(video, speed);
-    }
-
-    // 速度保護機能のセットアップ
-    function setupSpeedProtection(video, targetSpeed) {
-        if (videoObservers.has(video)) {
-            videoObservers.get(video).disconnect();
-        }
-
-        const originalPlaybackRateDescriptor = Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, 'playbackRate');
-
-        Object.defineProperty(video, '_protectedPlaybackRate', {
-            value: targetSpeed,
-            writable: true,
-            configurable: true
-        });
-
-        Object.defineProperty(video, 'playbackRate', {
-            get: function () {
-                return this._protectedPlaybackRate || originalPlaybackRateDescriptor.get.call(this);
-            },
-            set: function (value) {
-                if (Math.abs(value - targetSpeed) > 0.01) {
-                    if (settings.advanced.debugMode) {
-                        console.log(`速度変更を阻止: ${value} -> ${targetSpeed}`);
-                    }
-                    this._protectedPlaybackRate = targetSpeed;
-                    originalPlaybackRateDescriptor.set.call(this, targetSpeed);
-                    return;
-                }
-                this._protectedPlaybackRate = value;
-                originalPlaybackRateDescriptor.set.call(this, value);
-            },
-            configurable: true
-        });
-
-        const observer = new MutationObserver(() => {
-            if (Math.abs(video.playbackRate - targetSpeed) > 0.01) {
-                video.playbackRate = targetSpeed;
+            const saved = localStorage.getItem('videoSpeedController_lastSpeed');
+            if (saved) {
+                currentTargetSpeed = parseFloat(saved);
+            } else {
+                currentTargetSpeed = settings.speedControl.defaultSpeed;
             }
-        });
+        } else {
+            currentTargetSpeed = settings.speedControl.defaultSpeed;
+        }
+    }
 
-        observer.observe(video, { attributes: true, attributeFilter: ['playbackRate'] });
-        videoObservers.set(video, observer);
+    // 修飾キーのチェック
+    function checkModifiers(event, requiredModifiers) {
+        if (!requiredModifiers || requiredModifiers.length === 0) return true;
 
-        const protectSpeed = () => {
-            if (Math.abs(video.playbackRate - targetSpeed) > 0.01) {
-                video.playbackRate = targetSpeed;
+        for (const modifier of requiredModifiers) {
+            switch (modifier.toLowerCase()) {
+                case 'ctrl':
+                case 'control':
+                    if (!event.ctrlKey) return false;
+                    break;
+                case 'alt':
+                    if (!event.altKey) return false;
+                    break;
+                case 'shift':
+                    if (!event.shiftKey) return false;
+                    break;
+                case 'meta':
+                case 'cmd':
+                    if (!event.metaKey) return false;
+                    break;
             }
-        };
-
-        video.addEventListener('ratechange', protectSpeed);
-        video.addEventListener('loadedmetadata', protectSpeed);
-        video.addEventListener('play', protectSpeed);
+        }
+        return true;
     }
 
-    // 通知表示
-    function showSpeedNotification(message) {
-        const notification = document.createElement('div');
-        notification.textContent = message;
-        notification.style.cssText = `
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(0, 0, 0, 0.8);
-            color: white;
-            padding: 10px 20px;
-            border-radius: 20px;
-            z-index: 10001;
-            font-family: Arial, sans-serif;
-            font-size: 16px;
-            pointer-events: none;
-        `;
-
-        document.body.appendChild(notification);
-
-        setTimeout(() => {
-            notification.remove();
-        }, settings.ui.notificationDuration);
-    }
-
-    // キーボードイベントのチェック
-    function checkKeyboardEvent(e, action) {
-        const key = settings.keyboard.keys[action];
-        const modifiers = settings.keyboard.modifiers[action] || [];
-
-        if (e.key !== key) return false;
-
-        const requiredModifiers = {
-            alt: modifiers.includes('alt'),
-            ctrl: modifiers.includes('ctrl'),
-            shift: modifiers.includes('shift'),
-            meta: modifiers.includes('meta')
-        };
-
-        return e.altKey === requiredModifiers.alt &&
-            e.ctrlKey === requiredModifiers.ctrl &&
-            e.shiftKey === requiredModifiers.shift &&
-            e.metaKey === requiredModifiers.meta;
-    }
-
-    // キーボードショートカット
+    // キーボードショートカット設定
     function setupKeyboardShortcuts() {
         if (!settings.keyboard.enableKeyboardShortcuts) return;
 
         document.addEventListener('keydown', (e) => {
-            let handled = false;
+            const action = settings.keyboard.actions[e.key];
+            if (!action) return;
 
-            // 速度増加
-            if (checkKeyboardEvent(e, 'increaseSpeed')) {
-                e.preventDefault();
-                const newSpeed = Math.min(settings.speedControl.maxSpeed,
-                    currentTargetSpeed + settings.speedControl.speedStep);
-                setVideoSpeed(newSpeed);
-                handled = true;
-            }
-            // 速度減少
-            else if (checkKeyboardEvent(e, 'decreaseSpeed')) {
-                e.preventDefault();
-                const newSpeed = Math.max(settings.speedControl.minSpeed,
-                    currentTargetSpeed - settings.speedControl.speedStep);
-                setVideoSpeed(newSpeed);
-                handled = true;
-            }
-            // 通常速度
-            else if (checkKeyboardEvent(e, 'normalSpeed')) {
-                e.preventDefault();
-                setVideoSpeed(settings.speedControl.defaultSpeed);
-                handled = true;
-            }
-            // プリセット速度
-            else {
-                const speedActions = [
-                    { action: 'setSpeed025', speed: 0.25 },
-                    { action: 'setSpeed050', speed: 0.5 },
-                    { action: 'setSpeed075', speed: 0.75 },
-                    { action: 'setSpeed100', speed: 1.0 },
-                    { action: 'setSpeed125', speed: 1.25 },
-                    { action: 'setSpeed150', speed: 1.5 },
-                    { action: 'setSpeed175', speed: 1.75 },
-                    { action: 'setSpeed200', speed: 2.0 },
-                    { action: 'setSpeed250', speed: 2.5 },
-                    { action: 'setSpeed300', speed: 3.0 }
-                ];
+            // デフォルト修飾キーのチェック
+            const modifiersMatch = checkModifiers(e, settings.keyboard.defaultModifiers);
+            if (!modifiersMatch) return;
 
-                for (const speedAction of speedActions) {
-                    if (checkKeyboardEvent(e, speedAction.action)) {
-                        e.preventDefault();
-                        setVideoSpeed(speedAction.speed);
-                        handled = true;
-                        break;
-                    }
-                }
-            }
+            e.preventDefault();
+            e.stopPropagation();
 
-            if (handled && settings.advanced.debugMode) {
-                console.log('キーボードショートカット実行:', e.key, '現在の速度:', currentTargetSpeed);
+            const videos = document.querySelectorAll('video');
+            const activeVideo = Array.from(videos).find(v => !v.paused) || videos[0];
+
+            if (activeVideo) {
+                executeAction(action, activeVideo);
             }
         });
     }
 
-    // 保存された速度を適用
-    function applySavedSpeed() {
+    // アクション実行
+    function executeAction(action, video) {
+        switch (action.type) {
+            case 'setSpeed':
+                setVideoSpeed(action.speed);
+                break;
+            case 'increaseSpeed':
+                setVideoSpeed(currentTargetSpeed + action.step);
+                break;
+            case 'seekRelative':
+                seekRelative(video, action.time);
+                break;
+            default:
+                console.warn('[Video Speed Controller] 未対応のアクションタイプ:', action.type);
+        }
+    }
+
+    // 速度設定
+    function setVideoSpeed(speed) {
+        // 速度を範囲内に制限
+        speed = Math.max(settings.speedControl.minSpeed, Math.min(settings.speedControl.maxSpeed, speed));
+        currentTargetSpeed = speed;
+
+        // 速度を保存
         if (settings.speedControl.rememberLastSpeed) {
-            const savedSpeed = localStorage.getItem('videoSpeedController_speed');
-            if (savedSpeed) {
-                setVideoSpeed(parseFloat(savedSpeed));
-                return;
-            }
+            localStorage.setItem('videoSpeedController_lastSpeed', speed.toString());
         }
 
-        if (settings.ui.enableOnPageLoad && currentTargetSpeed !== settings.speedControl.defaultSpeed) {
-            setVideoSpeed(settings.speedControl.defaultSpeed);
+        // すべての動画要素に適用
+        const videos = document.querySelectorAll('video');
+        videos.forEach(video => {
+            setupSpeedProtection(video, speed);
+        });
+
+        // 通知表示
+        if (settings.ui.showActionNotifications) {
+            showActionNotification(`速度: ${speed.toFixed(2)}x`);
         }
+
+        if (settings.advanced.debugMode) {
+            console.log('[Video Speed Controller] 速度設定:', speed);
+        }
+    }
+
+    // 相対シーク
+    function seekRelative(video, time) {
+        if (!video) return;
+
+        const newTime = video.currentTime + time;
+        const clampedTime = Math.max(0, Math.min(video.duration || 0, newTime));
+        video.currentTime = clampedTime;
+
+        // 通知表示
+        if (settings.ui.showActionNotifications) {
+            const direction = time > 0 ? '進む' : '戻る';
+            showActionNotification(`${Math.abs(time)}秒${direction}`);
+        }
+
+        if (settings.advanced.debugMode) {
+            console.log('[Video Speed Controller] シーク:', time, '秒');
+        }
+    }
+
+    // 速度保護設定
+    function setupSpeedProtection(video, targetSpeed) {
+        if (!video) return;
+
+        // 既存の保護を解除
+        if (videoObservers.has(video)) {
+            videoObservers.get(video).disconnect();
+        }
+
+        // playbackRateプロパティを保護
+        let protectedSpeed = targetSpeed;
+
+        Object.defineProperty(video, 'playbackRate', {
+            get: function () {
+                return protectedSpeed;
+            },
+            set: function (value) {
+                // 外部からの変更を無視し、常に保護された速度を維持
+                protectedSpeed = targetSpeed;
+                if (this._actualPlaybackRate !== targetSpeed) {
+                    this._actualPlaybackRate = targetSpeed;
+                    // 実際のレートを設定
+                    Object.getPrototypeOf(this).playbackRate = targetSpeed;
+                }
+            },
+            configurable: true
+        });
+
+        // 初期速度設定
+        video._actualPlaybackRate = targetSpeed;
+        Object.getPrototypeOf(video).playbackRate = targetSpeed;
+
+        // 速度変更の監視
+        const observer = new MutationObserver(() => {
+            if (video.playbackRate !== targetSpeed) {
+                video.playbackRate = targetSpeed;
+            }
+        });
+
+        observer.observe(video, {
+            attributes: true,
+            attributeFilter: ['playbackRate']
+        });
+
+        videoObservers.set(video, observer);
+
+        // 定期的な速度チェック
+        const checkInterval = setInterval(() => {
+            if (!document.contains(video)) {
+                clearInterval(checkInterval);
+                if (videoObservers.has(video)) {
+                    videoObservers.get(video).disconnect();
+                    videoObservers.delete(video);
+                }
+                return;
+            }
+
+            if (Object.getPrototypeOf(video).playbackRate !== targetSpeed) {
+                Object.getPrototypeOf(video).playbackRate = targetSpeed;
+            }
+        }, settings.advanced.checkInterval);
     }
 
     // 動画要素の監視
     function observeVideos() {
-        if (!settings.advanced.autoApplyToNewVideos) return;
+        const processVideo = (video) => {
+            if (!videoObservers.has(video)) {
+                setupSpeedProtection(video, currentTargetSpeed);
+            }
+        };
 
-        const observer = new MutationObserver((mutations) => {
-            mutations.forEach((mutation) => {
-                mutation.addedNodes.forEach((node) => {
-                    if (node.nodeType === 1) {
-                        const videos = node.querySelectorAll ? node.querySelectorAll('video') : [];
-                        if (node.tagName === 'VIDEO') {
-                            videos.push(node);
-                        }
+        // 既存の動画要素を処理
+        document.querySelectorAll('video').forEach(processVideo);
 
-                        videos.forEach(video => {
-                            video.addEventListener('loadedmetadata', applySavedSpeed);
-                            if (settings.advanced.debugMode) {
-                                console.log('新しい動画要素を検出:', video);
+        // 新しい動画要素の監視
+        if (settings.advanced.autoApplyToNewVideos) {
+            const observer = new MutationObserver((mutations) => {
+                mutations.forEach((mutation) => {
+                    mutation.addedNodes.forEach((node) => {
+                        if (node.nodeType === Node.ELEMENT_NODE) {
+                            if (node.tagName === 'VIDEO') {
+                                processVideo(node);
+                            } else {
+                                node.querySelectorAll('video').forEach(processVideo);
                             }
-                        });
-                    }
+                        }
+                    });
                 });
             });
-        });
 
-        observer.observe(document.body, {
-            childList: true,
-            subtree: true
-        });
+            observer.observe(document, {
+                childList: true,
+                subtree: true
+            });
+        }
+    }
+
+    // 通知表示
+    function showActionNotification(message) {
+        if (!settings.ui.showActionNotifications) return;
+
+        // 既存の通知を削除
+        const existingNotification = document.querySelector('#video-speed-notification');
+        if (existingNotification) {
+            existingNotification.remove();
+        }
+
+        // 通知要素を作成
+        const notification = document.createElement('div');
+        notification.id = 'video-speed-notification';
+        notification.textContent = message;
+        notification.style.cssText = `
+            position: fixed !important;
+            top: 20px !important;
+            right: 20px !important;
+            background: rgba(0, 0, 0, 0.8) !important;
+            color: white !important;
+            padding: 10px 20px !important;
+            border-radius: 5px !important;
+            font-family: Arial, sans-serif !important;
+            font-size: 14px !important;
+            z-index: 999999 !important;
+            pointer-events: none !important;
+            transition: opacity 0.3s ease !important;
+        `;
+
+        document.body.appendChild(notification);
+
+        // 自動削除
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.style.opacity = '0';
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        notification.remove();
+                    }
+                }, 300);
+            }
+        }, settings.ui.notificationDuration);
     }
 
     // 初期化
     async function init() {
         await loadSettings();
 
-        if (settings.advanced.debugMode) {
-            console.log('動画速度コントローラー初期化開始');
-        }
-
-        setupKeyboardShortcuts();
-        observeVideos();
-
-        // 既存の動画に適用
-        const existingVideos = document.querySelectorAll('video');
-        existingVideos.forEach(video => {
-            video.addEventListener('loadedmetadata', applySavedSpeed);
-        });
-
-        if (existingVideos.length > 0) {
-            applySavedSpeed();
+        if (settings.ui.enableOnPageLoad) {
+            // DOMContentLoaded後に実行
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', () => {
+                    setupKeyboardShortcuts();
+                    observeVideos();
+                });
+            } else {
+                setupKeyboardShortcuts();
+                observeVideos();
+            }
         }
 
         if (settings.advanced.debugMode) {
-            console.log('動画速度コントローラー初期化完了');
-            showSpeedNotification('動画速度コントローラー: 起動完了');
+            console.log('[Video Speed Controller] 初期化完了');
         }
     }
 
-    // ページ読み込み完了後に初期化
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', init);
-    } else {
-        init();
-    }
+    // 拡張機能の開始
+    init().catch(error => {
+        console.error('[Video Speed Controller] 初期化エラー:', error);
+    });
 
 })();
