@@ -1,7 +1,7 @@
 {
     "manifest_version": 3,
     "name": "動画速度コントローラー",
-    "version": "2.0",
+    "version": "2.1",
     "description": "軽量動画速度・シークコントローラー",
     "permissions": [
         "activeTab"

@@ -6,6 +6,7 @@
     let currentTargetSpeed = 1;
     let videoObservers = new WeakMap();
     let savedSpeed = null;
+    let isExtensionEnabled = true; // 拡張機能の有効/無効状態
 
     // デフォルト設定
     function getDefaultSettings() {
@@ -84,6 +85,9 @@
                     "p": {
                         "type": "seekRelative",
                         "time": 36000
+                    },
+                    "t": {
+                        "type": "toggle"
                     }
                 }
             },
@@ -162,6 +166,17 @@
             const modifiersMatch = checkModifiers(e, settings.keyboard.defaultModifiers);
             if (!modifiersMatch) return;
 
+            // toggle アクションは常に実行可能
+            if (action.type === 'toggle') {
+                e.preventDefault();
+                e.stopPropagation();
+                toggleExtension();
+                return;
+            }
+
+            // 拡張機能が無効の場合は他のアクションを無視
+            if (!isExtensionEnabled) return;
+
             e.preventDefault();
             e.stopPropagation();
 
@@ -186,13 +201,82 @@
             case 'seekRelative':
                 seekRelative(video, action.time);
                 break;
+            case 'toggle':
+                toggleExtension();
+                break;
             default:
                 console.warn('[Video Speed Controller] 未対応のアクションタイプ:', action.type);
         }
     }
 
+    // 拡張機能のオン/オフ切り替え
+    function toggleExtension() {
+        isExtensionEnabled = !isExtensionEnabled;
+
+        // 状態をローカルストレージに保存
+        localStorage.setItem('videoSpeedController_enabled', isExtensionEnabled.toString());
+
+        const videos = document.querySelectorAll('video');
+
+        if (isExtensionEnabled) {
+            // 有効化：すべての動画に速度保護を適用
+            videos.forEach(video => {
+                setupSpeedProtection(video, currentTargetSpeed);
+            });
+
+            // 通知表示
+            if (settings.ui.showActionNotifications) {
+                showActionNotification('拡張機能: ON');
+            }
+
+            if (settings.advanced.debugMode) {
+                console.log('[Video Speed Controller] 拡張機能を有効化');
+            }
+        } else {
+            // 無効化：すべての動画の速度保護を解除
+            videos.forEach(video => {
+                removeSpeedProtection(video);
+            });
+
+            // 通知表示
+            if (settings.ui.showActionNotifications) {
+                showActionNotification('拡張機能: OFF');
+            }
+
+            if (settings.advanced.debugMode) {
+                console.log('[Video Speed Controller] 拡張機能を無効化');
+            }
+        }
+    }
+
+    // 速度保護を解除する関数
+    function removeSpeedProtection(video) {
+        if (!video) return;
+
+        // 既存の保護を解除
+        if (videoObservers.has(video)) {
+            const existingData = videoObservers.get(video);
+            if (existingData.observer) existingData.observer.disconnect();
+            if (existingData.interval) clearInterval(existingData.interval);
+            videoObservers.delete(video);
+        }
+
+        // playbackRateプロパティを元に戻す
+        if (video.hasOwnProperty('playbackRate')) {
+            delete video.playbackRate;
+        }
+
+        // カスタム関数を削除
+        if (video._updateSpeed) {
+            delete video._updateSpeed;
+        }
+    }
+
     // 速度設定
     function setVideoSpeed(speed) {
+        // 拡張機能が無効の場合は何もしない
+        if (!isExtensionEnabled) return;
+
         // 速度を範囲内に制限
         speed = Math.max(settings.speedControl.minSpeed, Math.min(settings.speedControl.maxSpeed, speed));
         currentTargetSpeed = speed;
@@ -342,13 +426,15 @@
     // 動画要素の監視
     function observeVideos() {
         const processVideo = (video) => {
-            if (!videoObservers.has(video)) {
+            if (!videoObservers.has(video) && isExtensionEnabled) {
                 setupSpeedProtection(video, currentTargetSpeed);
             }
         };
 
         // 既存の動画要素を処理
-        document.querySelectorAll('video').forEach(processVideo);
+        if (isExtensionEnabled) {
+            document.querySelectorAll('video').forEach(processVideo);
+        }
 
         // 新しい動画要素の監視
         if (settings.advanced.autoApplyToNewVideos) {
@@ -421,6 +507,12 @@
     async function init() {
         await loadSettings();
 
+        // 拡張機能の有効/無効状態を復元
+        const savedState = localStorage.getItem('videoSpeedController_enabled');
+        if (savedState !== null) {
+            isExtensionEnabled = savedState === 'true';
+        }
+
         if (settings.ui.enableOnPageLoad) {
             // DOMContentLoaded後に実行
             if (document.readyState === 'loading') {
@@ -435,7 +527,7 @@
         }
 
         if (settings.advanced.debugMode) {
-            console.log('[Video Speed Controller] 初期化完了');
+            console.log('[Video Speed Controller] 初期化完了 - 状態:', isExtensionEnabled ? 'ON' : 'OFF');
         }
     }
 

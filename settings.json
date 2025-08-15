@@ -30,7 +30,7 @@
             },
             "a": {
                 "type": "increaseSpeed",
-                "step": -0.5
+                "step": -0.25
             },
             "s": {
                 "type": "increaseSpeed",
@@ -38,7 +38,7 @@
             },
             "d": {
                 "type": "increaseSpeed",
-                "step": 0.5
+                "step": 0.25
             },
             "z": {
                 "type": "increaseSpeed",
@@ -79,6 +79,10 @@
             "p": {
                 "type": "seekRelative",
                 "time": 36000
+            },
+            "\\": {
+                "type": "toggle",
+                "description": "拡張機能のオン/オフ切り替え"
             }
         }
     },
