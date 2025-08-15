@@ -4,8 +4,17 @@
     "version": "2.1",
     "description": "軽量動画速度・シークコントローラー",
     "permissions": [
-        "activeTab"
+        "activeTab",
+        "tabs",
+        "scripting"
     ],
+    "host_permissions": [
+        "<all_urls>"
+    ],
+    "action": {
+        "default_title": "動画速度コントローラー",
+        "default_icon": "icon.png"
+    },
     "content_scripts": [
         {
             "matches": [
@@ -25,5 +34,8 @@
                 "<all_urls>"
             ]
         }
-    ]
+    ],
+    "icons": {
+        "128": "icon.png"
+    }
 }

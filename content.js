@@ -93,7 +93,7 @@
             },
             advanced: {
                 protectionMethod: "property_override",
-                debugMode: false,
+                debugMode: true,
                 autoApplyToNewVideos: true,
                 checkInterval: 100
             }
@@ -505,6 +505,8 @@
 
     // 初期化
     async function init() {
+        console.log('[Video Speed Controller] 拡張機能が読み込まれました');
+
         await loadSettings();
 
         // 拡張機能の有効/無効状態を復元
