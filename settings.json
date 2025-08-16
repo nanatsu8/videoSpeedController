@@ -88,7 +88,7 @@
     },
     "advanced": {
         "protectionMethod": "property_override",
-        "debugMode": false,
+        "debugMode": true,
         "autoApplyToNewVideos": true,
         "checkInterval": 100
     }

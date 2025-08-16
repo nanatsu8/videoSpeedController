@@ -5,7 +5,7 @@
     let settings = null;
     let currentTargetSpeed = 1;
     let videoObservers = new WeakMap();
-    let savedSpeed = null;
+    // let savedSpeed = null;
     let isExtensionEnabled = true; // 拡張機能の有効/無効状態
 
     // デフォルト設定
@@ -277,6 +277,8 @@
         // 拡張機能が無効の場合は何もしない
         if (!isExtensionEnabled) return;
 
+        console.log('[Video Speed Controller] 速度設定開始:', speed);
+
         // 速度を範囲内に制限
         speed = Math.max(settings.speedControl.minSpeed, Math.min(settings.speedControl.maxSpeed, speed));
         currentTargetSpeed = speed;
@@ -311,6 +313,8 @@
     // 相対シーク
     function seekRelative(video, time) {
         if (!video) return;
+
+        console.log('[Video Speed Controller] シーク開始:', time, '秒');
 
         const newTime = video.currentTime + time;
         const clampedTime = Math.max(0, Math.min(video.duration || 0, newTime));
@@ -531,6 +535,8 @@
         if (settings.advanced.debugMode) {
             console.log('[Video Speed Controller] 初期化完了 - 状態:', isExtensionEnabled ? 'ON' : 'OFF');
         }
+
+        showActionNotification(`状態: ${isExtensionEnabled ? 'ON' : 'OFF'}`);
     }
 
     // 拡張機能の開始
