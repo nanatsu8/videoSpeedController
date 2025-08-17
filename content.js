@@ -159,6 +159,19 @@
         if (!settings.keyboard.enableKeyboardShortcuts) return;
 
         document.addEventListener('keydown', (e) => {
+            // 入力要素でのキー入力は無視
+            const activeElement = document.activeElement;
+            if (activeElement && (
+                activeElement.tagName === 'INPUT' ||
+                activeElement.tagName === 'TEXTAREA' ||
+                activeElement.tagName === 'SELECT' ||
+                activeElement.isContentEditable ||
+                activeElement.getAttribute('contenteditable') === 'true' ||
+                activeElement.getAttribute('role') === 'textbox'
+            )) {
+                return; // 入力フィールドでは何もしない
+            }
+
             const action = settings.keyboard.actions[e.key];
             if (!action) return;
 
@@ -535,8 +548,6 @@
         if (settings.advanced.debugMode) {
             console.log('[Video Speed Controller] 初期化完了 - 状態:', isExtensionEnabled ? 'ON' : 'OFF');
         }
-
-        showActionNotification(`状態: ${isExtensionEnabled ? 'ON' : 'OFF'}`);
     }
 
     // 拡張機能の開始
