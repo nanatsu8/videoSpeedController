@@ -5,6 +5,20 @@
         "minSpeed": 0.0625,
         "maxSpeed": 10.0
     },
+    "urlDefaults": [
+        {
+            "pattern": "youtube.com",
+            "speed": 1.5
+        },
+        {
+            "pattern": "nicovideo.jp",
+            "speed": 1.25
+        },
+        {
+            "pattern": "abema.tv",
+            "speed": 1.5
+        }
+    ],
     "ui": {
         "showActionNotifications": true,
         "notificationDuration": 1000,

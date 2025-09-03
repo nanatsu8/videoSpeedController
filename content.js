@@ -96,7 +96,8 @@
                 debugMode: true,
                 autoApplyToNewVideos: true,
                 checkInterval: 100
-            }
+            },
+            urlDefaults: null // URLごとのデフォルト設定
         };
     }
 
@@ -126,6 +127,20 @@
             }
         } else {
             currentTargetSpeed = settings.speedControl.defaultSpeed;
+        }
+
+        // URLごとのデフォルト速度を適用
+        if (settings.urlDefaults && Array.isArray(settings.urlDefaults)) {
+            const url = location.href;
+            for (const rule of settings.urlDefaults) {
+                if (rule.pattern && url.includes(rule.pattern) && typeof rule.speed === 'number') {
+                    currentTargetSpeed = rule.speed;
+                    if (settings.advanced.debugMode) {
+                        console.log('[Video Speed Controller] URLパターン一致:', rule.pattern, '→ デフォルト速度:', rule.speed);
+                    }
+                    break;
+                }
+            }
         }
     }
 
