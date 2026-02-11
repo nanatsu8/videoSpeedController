@@ -28,66 +28,82 @@
                 "actions": {
                     "q": {
                         "type": "setSpeed",
-                        "speed": 1.0
+                        "speed": 1.0,
+                        "modifiers": ["alt"]
                     },
                     "w": {
                         "type": "setSpeed",
-                        "speed": 1.5
+                        "speed": 1.5,
+                        "modifiers": ["alt"]
                     },
                     "e": {
                         "type": "setSpeed",
-                        "speed": 2.0
+                        "speed": 2.0,
+                        "modifiers": ["alt"]
                     },
                     "a": {
                         "type": "increaseSpeed",
-                        "step": -0.5
+                        "step": -0.5,
+                        "modifiers": ["alt"]
                     },
                     "d": {
                         "type": "increaseSpeed",
-                        "step": 0.5
+                        "step": 0.5,
+                        "modifiers": ["alt"]
                     },
                     "z": {
                         "type": "increaseSpeed",
-                        "step": -0.1
+                        "step": -0.1,
+                        "modifiers": ["alt"]
                     },
                     "x": {
                         "type": "increaseSpeed",
-                        "step": 0.1
+                        "step": 0.1,
+                        "modifiers": ["alt"]
                     },
                     "v": {
                         "type": "seekRelative",
-                        "time": -2
+                        "time": -2,
+                        "modifiers": ["alt"]
                     },
                     "b": {
                         "type": "seekRelative",
-                        "time": 2
+                        "time": 2,
+                        "modifiers": ["alt"]
                     },
                     "g": {
                         "type": "seekRelative",
-                        "time": -6
+                        "time": -6,
+                        "modifiers": ["alt"]
                     },
                     "h": {
                         "type": "seekRelative",
-                        "time": 6
+                        "time": 6,
+                        "modifiers": ["alt"]
                     },
                     "y": {
                         "type": "seekRelative",
-                        "time": -18
+                        "time": -18,
+                        "modifiers": ["alt"]
                     },
                     "u": {
                         "type": "seekRelative",
-                        "time": 18
+                        "time": 18,
+                        "modifiers": ["alt"]
                     },
                     "n": {
                         "type": "seekRelative",
-                        "time": 80
+                        "time": 80,
+                        "modifiers": ["alt"]
                     },
                     "p": {
                         "type": "seekRelative",
-                        "time": 36000
+                        "time": 36000,
+                        "modifiers": ["alt"]
                     },
                     "t": {
-                        "type": "toggle"
+                        "type": "toggle",
+                        "modifiers": ["alt"]
                     }
                 }
             },
@@ -190,8 +206,9 @@
             const action = settings.keyboard.actions[e.key];
             if (!action) return;
 
-            // デフォルト修飾キーのチェック
-            const modifiersMatch = checkModifiers(e, settings.keyboard.defaultModifiers);
+            // アクション固有の修飾キーがあればそれを使用、なければデフォルトを使用
+            const modifiersToCheck = action.modifiers !== undefined ? action.modifiers : settings.keyboard.defaultModifiers;
+            const modifiersMatch = checkModifiers(e, modifiersToCheck);
             if (!modifiersMatch) return;
 
             // toggle アクションは常に実行可能
@@ -208,7 +225,7 @@
             e.preventDefault();
             e.stopPropagation();
 
-            const videos = document.querySelectorAll('video');
+            const videos = document.querySelectorAll('video, audio');
             const activeVideo = Array.from(videos).find(v => !v.paused) || videos[0];
 
             if (activeVideo) {
@@ -244,7 +261,7 @@
         // 状態をローカルストレージに保存
         localStorage.setItem('videoSpeedController_enabled', isExtensionEnabled.toString());
 
-        const videos = document.querySelectorAll('video');
+        const videos = document.querySelectorAll('video, audio');
 
         if (isExtensionEnabled) {
             // 有効化：すべての動画に速度保護を適用
@@ -316,8 +333,8 @@
             localStorage.setItem('videoSpeedController_lastSpeed', speed.toString());
         }
 
-        // すべての動画要素に適用
-        const videos = document.querySelectorAll('video');
+        // すべての動画/音声要素に適用
+        const videos = document.querySelectorAll('video, audio');
         videos.forEach(video => {
             if (video._updateSpeed) {
                 // 既に保護されている動画の場合は専用関数を使用
@@ -463,9 +480,9 @@
             }
         };
 
-        // 既存の動画要素を処理
+        // 既存の動画/音声要素を処理
         if (isExtensionEnabled) {
-            document.querySelectorAll('video').forEach(processVideo);
+            document.querySelectorAll('video, audio').forEach(processVideo);
         }
 
         // 新しい動画要素の監視
@@ -474,10 +491,10 @@
                 mutations.forEach((mutation) => {
                     mutation.addedNodes.forEach((node) => {
                         if (node.nodeType === Node.ELEMENT_NODE) {
-                            if (node.tagName === 'VIDEO') {
+                            if (node.tagName === 'VIDEO' || node.tagName === 'AUDIO') {
                                 processVideo(node);
                             } else {
-                                node.querySelectorAll('video').forEach(processVideo);
+                                node.querySelectorAll('video, audio').forEach(processVideo);
                             }
                         }
                     });
